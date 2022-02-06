@@ -1,0 +1,19 @@
+# Basics
+
+jupyter
+ipython
+
+# Data Manipulation
+
+matplotlib
+numpy
+pandas
+
+# Machine Learning
+
+torch
+tensorflow
+
+# Computer Vision
+opencv-python~=4.5.0
+
