@@ -3,20 +3,39 @@ import sys
 import os
 from sys import platform
 
-(major_ver, minor_ver, subminor_ver) = (cv2.__version__).split('.')￼
+(major_ver, minor_ver, subminor_ver) = cv2.__version__.split('.')
 
 
-# 
+def select_tracker(tracker_list, selected, i):
+    if selected:
+        return tracker_list[i]
+    else:
+        print("Potential trackers: ")
+        for index in range(len(tracker_list)):
+            print(index, tracker_list[index])
+        value = int(input(f"Which tracker would you like to use: "))
+        print()
+        return select_tracker(tracker_list, True, value)
 
 
+def select_video(video_list, selected, i):
+    if selected:
+        return video_list[i]
+    else:
+        print("Potential videos: ")
+        for index in range(len(video_list)):
+            print(index, video_list[index])
+        value = int(input(f"Which video would you like to use: "))
+        return select_video(video_list, True, value)
 
-if __name__ == '__main__' :
+
+if __name__ == '__main__':
 
     # Set up tracker.
     # Instead of MIL, you can also use
 
-    tracker_types = ['BOOSTING', 'MIL','KCF', 'TLD', 'MEDIANFLOW', 'GOTURN', 'MOSSE', 'CSRT']
-    tracker_type = tracker_types[2]
+    potential_tracker_types = ['BOOSTING', 'MIL', 'KCF', 'TLD', 'MEDIANFLOW', 'GOTURN', 'MOSSE', 'CSRT']
+    tracker_type = select_tracker(potential_tracker_types, False, -1)
 
     if int(minor_ver) < 3:
         tracker = cv2.Tracker_create(tracker_type)
@@ -39,19 +58,21 @@ if __name__ == '__main__' :
             tracker = cv2.TrackerCSRT_create()
 
     # Read video
-    video = cv2.VideoCapture("videos/chaplin.mp4")
+    videos = ['videos/arloPuppy.mp4', 'videos/bike.mp4', 'videos/Dusty_snow.mp4', 'firgatebird.mp4', 'Merlin_run.mp4']
+    video_location = select_video(videos, False, -1)
+    video = cv2.VideoCapture(video_location)
 
     # Exit if video not opened.
     if not video.isOpened():
-        print "Could not open video"
+        print("Could not open video")
         sys.exit()
 
     # Read first frame.
     ok, frame = video.read()
     if not ok:
-        print 'Cannot read video file'
+        print('Cannot read video file')
         sys.exit()
-    
+
     # Define an initial bounding box
     bbox = (287, 23, 86, 320)
 
@@ -66,7 +87,7 @@ if __name__ == '__main__' :
         ok, frame = video.read()
         if not ok:
             break
-        
+
         # Start timer
         timer = cv2.getTickCount()
 
@@ -81,21 +102,20 @@ if __name__ == '__main__' :
             # Tracking success
             p1 = (int(bbox[0]), int(bbox[1]))
             p2 = (int(bbox[0] + bbox[2]), int(bbox[1] + bbox[3]))
-            cv2.rectangle(frame, p1, p2, (255,0,0), 2, 1)
-        else :
+            cv2.rectangle(frame, p1, p2, (255, 0, 0), 2, 1)
+        else:
             # Tracking failure
-            cv2.putText(frame, "Tracking failure detected", (100,80), cv2.FONT_HERSHEY_SIMPLEX, 0.75,(0,0,255),2)
+            cv2.putText(frame, "Tracking failure detected", (100, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 0, 255), 2)
 
         # Display tracker type on frame
-        cv2.putText(frame, tracker_type + " Tracker", (100,20), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (50,170,50),2);
-    
+        cv2.putText(frame, tracker_type + " Tracker", (100, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (50, 170, 50), 2);
+
         # Display FPS on frame
-        cv2.putText(frame, "FPS : " + str(int(fps)), (100,50), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (50,170,50), 2);
+        cv2.putText(frame, "FPS : " + str(int(fps)), (100, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (50, 170, 50), 2);
 
         # Display result
         cv2.imshow("Tracking", frame)
 
         # Exit if ESC pressed
         k = cv2.waitKey(1) & 0xff
-        if k == 27 : break
-
+        if k == 27: break
