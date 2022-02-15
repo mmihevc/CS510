@@ -41,24 +41,24 @@ if __name__ == '__main__':
         tracker = cv2.Tracker_create(tracker_type)
     else:
         if tracker_type == 'BOOSTING':
-            tracker = cv2.TrackerBoosting_create()
+            tracker = cv2.legacy.TrackerBoosting_create()
         if tracker_type == 'MIL':
             tracker = cv2.TrackerMIL_create()
         if tracker_type == 'KCF':
             tracker = cv2.TrackerKCF_create()
         if tracker_type == 'TLD':
-            tracker = cv2.TrackerTLD_create()
+            tracker = cv2.legacy.TrackerTLD_create()
         if tracker_type == 'MEDIANFLOW':
             tracker = cv2.TrackerMedianFlow_create()
         if tracker_type == 'GOTURN':
             tracker = cv2.TrackerGOTURN_create()
         if tracker_type == 'MOSSE':
-            tracker = cv2.TrackerMOSSE_create()
+            tracker = cv2.legacy.TrackerMOSSE_create()
         if tracker_type == "CSRT":
             tracker = cv2.TrackerCSRT_create()
 
     # Read video
-    videos = ['videos/arloPuppy.mp4', 'videos/bike.mp4', 'videos/Dusty_snow.mp4', 'firgatebird.mp4', 'Merlin_run.mp4']
+    videos = ['videos/arloPuppy.mp4', 'videos/bike.mp4', 'videos/Dusty_snow.mp4', 'videos/frigatebird.mp4', 'videos/Merlin_run.mp4']
     video_location = select_video(videos, False, -1)
     video = cv2.VideoCapture(video_location)
 
