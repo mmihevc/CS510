@@ -1,5 +1,6 @@
 import cv2
 import sys
+import numpy as np
 import os
 from sys import platform
 
@@ -29,6 +30,24 @@ def select_video(video_list, selected, i):
         return select_video(video_list, True, value)
 
 
+def move_frame_by_frame(f, has_next, index):
+    while video.isOpened():
+        key = cv2.waitKey(0) & 0xff
+        # Quit when 'esc' is pressed
+        if key == ord('q'):
+            exit()
+        if key == 3:
+            index += 1
+            if not has_next[index]:
+                break
+            else:
+                cv2.imshow("video", f[index])
+        elif key == 2:
+            if index != 0:
+                index -= 1
+            cv2.imshow("video", f[index])
+
+
 if __name__ == '__main__':
 
     # Set up tracker.
@@ -49,7 +68,7 @@ if __name__ == '__main__':
         if tracker_type == 'TLD':
             tracker = cv2.legacy.TrackerTLD_create()
         if tracker_type == 'MEDIANFLOW':
-            tracker = cv2.TrackerMedianFlow_create()
+            tracker = cv2.legacy.TrackerMedianFlow_create()
         if tracker_type == 'GOTURN':
             tracker = cv2.TrackerGOTURN_create()
         if tracker_type == 'MOSSE':
@@ -58,9 +77,14 @@ if __name__ == '__main__':
             tracker = cv2.TrackerCSRT_create()
 
     # Read video
-    videos = ['videos/arloPuppy.mp4', 'videos/bike.mp4', 'videos/Dusty_snow.mp4', 'videos/frigatebird.mp4', 'videos/Merlin_run.mp4']
+    videos = ['videos/arloPuppy.mp4', 'videos/bike.mp4', 'videos/Dusty_snow.mp4', 'videos/frigatebird.mp4',
+              'videos/Merlin_run.mp4']
     video_location = select_video(videos, False, -1)
     video = cv2.VideoCapture(video_location)
+    total_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+    frames = [False] * total_frames
+    hasNextFrame = [False] * total_frames
+    frame_index = 0
 
     # Exit if video not opened.
     if not video.isOpened():
@@ -75,6 +99,9 @@ if __name__ == '__main__':
 
     # Define an initial bounding box
     bbox = (287, 23, 86, 320)
+
+    frame_input = input(f"Do you wish to move frame-by-frame [Y/N]: ")
+    move_frame = str(frame_input).lower() == "y"
 
     # Uncomment the line below to select a different bounding box
     bbox = cv2.selectROI(frame, False)
@@ -95,7 +122,7 @@ if __name__ == '__main__':
         ok, bbox = tracker.update(frame)
 
         # Calculate Frames per second (FPS)
-        fps = cv2.getTickFrequency() / (cv2.getTickCount() - timer);
+        fps = cv2.getTickFrequency() / (cv2.getTickCount() - timer)
 
         # Draw bounding box
         if ok:
@@ -114,8 +141,15 @@ if __name__ == '__main__':
         cv2.putText(frame, "FPS : " + str(int(fps)), (100, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (50, 170, 50), 2);
 
         # Display result
+        frames[frame_index] = frame
+        hasNextFrame[frame_index] = True
         cv2.imshow("Tracking", frame)
 
         # Exit if ESC pressed
-        k = cv2.waitKey(1) & 0xff
-        if k == 27: break
+        if move_frame:
+            move_frame_by_frame(frames, hasNextFrame, frame_index)
+        else:
+            k = cv2.waitKey(1) & 0xff
+            if k == 27:
+                break
+        frame_index += 1
