@@ -27,6 +27,7 @@ def select_video(video_list, selected, i):
         for index in range(len(video_list)):
             print(index, video_list[index])
         value = int(input(f"Which video would you like to use: "))
+        print()
         return select_video(video_list, True, value)
 
 
@@ -52,7 +53,6 @@ if __name__ == '__main__':
 
     # Set up tracker.
     # Instead of MIL, you can also use
-
     potential_tracker_types = ['BOOSTING', 'MIL', 'KCF', 'TLD', 'MEDIANFLOW', 'GOTURN', 'MOSSE', 'CSRT']
     tracker_type = select_tracker(potential_tracker_types, False, -1)
 
@@ -85,6 +85,7 @@ if __name__ == '__main__':
     frames = [False] * total_frames
     hasNextFrame = [False] * total_frames
     frame_index = 0
+    total_fps = 0
 
     # Exit if video not opened.
     if not video.isOpened():
@@ -123,6 +124,7 @@ if __name__ == '__main__':
 
         # Calculate Frames per second (FPS)
         fps = cv2.getTickFrequency() / (cv2.getTickCount() - timer)
+        total_fps += fps
 
         # Draw bounding box
         if ok:
@@ -153,3 +155,6 @@ if __name__ == '__main__':
             if k == 27:
                 break
         frame_index += 1
+
+    average_fps = total_fps / total_frames
+    print("The average frames per second are: ", average_fps)
