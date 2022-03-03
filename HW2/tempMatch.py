@@ -11,24 +11,10 @@ methods = ['cv.TM_CCOEFF', 'cv.TM_CCOEFF_NORMED', 'cv.TM_CCORR',
            'cv.TM_CCORR_NORMED', 'cv.TM_SQDIFF', 'cv.TM_SQDIFF_NORMED']
 
 
-def select_method(selected, index):
-    if selected:
-        return methods[index]
-    else:
-        print("Potential methods: ")
-        for index in range(len(methods)):
-            print(index, methods[index])
-        value = int(input(f"Which method for comparison would you like to use: "))
-        print()
-        return select_method(True, value)
-
-
 if __name__ == '__main__':
     args = sys.argv[1:]
     if len(args) >= 1:
         threshold = float(args[0])
-
-    method = select_method(False, -1)
 
     # Initialize the webcam
     video = cv.VideoCapture(0)
@@ -60,11 +46,23 @@ if __name__ == '__main__':
             print("in recognition mode")
 
         if recognition:
-            res = cv.matchTemplate(frame, tempImage, cv.TM_CCOEFF_NORMED)
-            location = np.where(res >= threshold)
-            for pt in zip(*location[::-1]):
-                # putting  rectangle on recognized area
-                cv.rectangle(frame, pt, (pt[0] + w, pt[1] + h), (0, 0, 255), 2)
+            for m in methods:
+                method = eval(m)
+
+                res = cv.matchTemplate(frame, tempImage, method)
+                min_val, max_val, min_loc, max_loc = cv.minMaxLoc(res)
+
+                # If the method is TM_SQDIFF or TM_SQDIFF_NORMED, take minimum
+                if method in [cv.TM_SQDIFF, cv.TM_SQDIFF_NORMED]:
+                    top_left = min_loc
+                else:
+                    top_left = max_loc
+                bottom_right = (top_left[0] + w, top_left[1] + h)
+
+                location = np.where(res >= threshold)
+                for pt in zip(*location[::-1]):
+                    # putting  rectangle on recognized area
+                    cv.rectangle(frame, pt, (pt[0] + w, pt[1] + h), (0, 0, 255), 2)
 
         cv.imshow("Output", frame)
         if cv.waitKey(30) & 0xFF == ord('q'):
