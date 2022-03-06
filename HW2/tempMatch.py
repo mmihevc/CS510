@@ -18,6 +18,19 @@ colorIndex = 0
 templates = []
 recognition = False
 
+
+def select_method(method_list, selected, i):
+    if selected:
+        return method_list[i]
+    else:
+        print("Potential Methods: ")
+        for index in range(len(method_list)):
+            print(index, method_list[index])
+        value = int(input(f"Which method would you like to use: "))
+        print()
+        return select_method(method_list, True, value)
+
+
 class Template:
     def __init__(self, tempImage, width, height, color, name):
         self.tempImage = tempImage
@@ -32,14 +45,16 @@ class Template:
     color: any
     name: any
 
+
 if __name__ == '__main__':
     args = sys.argv[1:]
     if len(args) >= 1:
         includeCapDShow = int(args[0])
     if len(args) >= 2:
         threshold = float(args[1])
-    if len(args) >= 3:
-        m = str(args[2])
+
+    m = select_method(methods, False, -1)
+    print("Selected method: ", m)
 
     # Initialize the webcam
     if includeCapDShow == 0:
@@ -64,7 +79,7 @@ if __name__ == '__main__':
 
         if recognition:
             header = "Recognition Mode ON - threshold:" + str(float(threshold))
-            #for m in methods: (I think we should pass in the method from the command line)
+            # for m in methods: (I think we should pass in the method from the command line)
             for t in templates:
                 method = eval(m)
 
@@ -79,16 +94,18 @@ if __name__ == '__main__':
                         top_left = max_loc
                     bottom_right = (top_left[0] + t.width, top_left[1] + t.height)
 
-                     # putting  rectangle on recognized area
+                    # putting  rectangle on recognized area
                     cv.rectangle(frame, top_left, bottom_right, t.color, 2)
 
                     formattedMaxVal = "{:.3f}".format(max_val)
-                    text_width, text_height = cv.getTextSize(t.name + " - " + formattedMaxVal, cv.FONT_HERSHEY_SIMPLEX, 0.5, 2)    
-                    cv.putText(frame, t.name + " - " + formattedMaxVal, (top_left[0], top_left[1] + t.height + (text_height * 3)), cv.FONT_HERSHEY_SIMPLEX, 0.5, t.color, 2)
+                    text_width, text_height = cv.getTextSize(t.name + " - " + formattedMaxVal, cv.FONT_HERSHEY_SIMPLEX,
+                                                             0.5, 2)
+                    cv.putText(frame, t.name + " - " + formattedMaxVal,
+                               (top_left[0], top_left[1] + t.height + (text_height * 3)), cv.FONT_HERSHEY_SIMPLEX, 0.5,
+                               t.color, 2)
         else:
             header = "Recognition Mode OFF"
 
-            
         cv.imshow(header, frame)
 
         k = cv.waitKey(30)
@@ -102,11 +119,11 @@ if __name__ == '__main__':
 
             template = Template(tempImage, w, h, colors[colorIndex], name)
             colorIndex += 1
-            
-            #wrap the color list back to the start
+
+            # wrap the color list back to the start
             if colorIndex == 5:
                 colorIndex = 0
-            
+
             templates.append(template)
             print("Templated Captured")
         elif k & 0xFF == ord('r'):
