@@ -1,3 +1,5 @@
-# CS510 Computer Vision: Maddie Mihevc & Nishanth Ashireddy
+# CS510 Computer Vision: Maddie Mihevc & Hannah Vanderhoeven
+
+
 
 
