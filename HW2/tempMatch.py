@@ -129,9 +129,11 @@ if __name__ == '__main__':
         elif k & 0xFF == ord('r'):
             recognition = True
             print("Recognition Mode On")
+            cv.destroyWindow("Recognition Mode OFF")
         elif k & 0xFF == ord('u'):
             recognition = False
             print("Recognition Mode Off")
+            cv.destroyWindow("Recognition Mode ON - threshold:" + str(float(threshold)))
         elif k & 0xFF == ord('l'):
             print("Clearing Templates, Recognition Mode Off")
             recognition = False
