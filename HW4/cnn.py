@@ -1,4 +1,6 @@
 #sources: https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html
+# https://pyimagesearch.com/2021/07/19/pytorch-training-your-first-convolutional-neural-network-cnn/
+
 
 import torch
 import torchvision
@@ -9,45 +11,97 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-class Net(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.conv1 = nn.Conv2d(3, 6, 5)
-        self.pool = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(6, 16, 5)
-        self.fc1 = nn.Linear(16 * 5 * 5, 120)
-        self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 10)
+from wildAnimalDataset import WildAnimals
+
+# class Net(nn.Module):
+#     def __init__(self):
+#         super(Net, self).__init__()
+#         self.flatten = nn.Flatten()
+#         self.linear_relu_stack = nn.Sequential(
+#             nn.Linear(4*64*64, 512),
+#             nn.ReLU(),
+#             nn.Linear(512, 512),
+#             nn.ReLU(),
+#             nn.Linear(512, 10),
+#         )
+
+#     def forward(self, x):
+#         x = self.flatten(x)
+#         logits = self.linear_relu_stack(x)
+#         return logits
+
+class LeNet(nn.Module):
+    def __init__(self, numChannels, classes):
+        # call the parent constructor
+        super(LeNet, self).__init__()
+        self.flatten = nn.Flatten()
+
+        # initialize first set of CONV => RELU => POOL layers
+        self.conv1 = nn.Conv2d(in_channels=numChannels, out_channels=20,
+            kernel_size=(5, 5))
+        self.relu1 = nn.ReLU()
+        self.maxpool1 = nn.MaxPool2d(kernel_size=(2, 2), stride=(2, 2))
+
+        # initialize second set of CONV => RELU => POOL layers
+        self.conv2 = nn.Conv2d(in_channels=20, out_channels=50,
+            kernel_size=(5, 5))
+        self.relu2 = nn.ReLU()
+        self.maxpool2 = nn.MaxPool2d(kernel_size=(2, 2), stride=(2, 2))
+
+        # initialize first (and only) set of FC => RELU layers
+        self.fc1 = nn.Linear(in_features=8450, out_features=500)
+        self.relu3 = nn.ReLU()
+
+        # initialize our softmax classifier
+        self.fc2 = nn.Linear(in_features=500, out_features=classes)
+        self.logSoftmax = nn.LogSoftmax(dim=1)
 
     def forward(self, x):
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = torch.flatten(x, 1) # flatten all dimensions except batch
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x)
-        return x
+        # pass the input through our first set of CONV => RELU =>
+        # POOL layers
+        x = self.conv1(x)
+        x = self.relu1(x)
+        x = self.maxpool1(x)
+
+        # pass the output from the previous layer through the second
+        # set of CONV => RELU => POOL layers
+        x = self.conv2(x)
+        x = self.relu2(x)
+        x = self.maxpool2(x)
+
+        # flatten the output from the previous layer and pass it
+        # through our only set of FC => RELU layers
+        x = self.flatten(x)
+        x = self.fc1(x)
+        x = self.relu3(x)
+
+        # pass the output to our softmax classifier to get our output
+        # predictions
+        x = self.fc2(x)
+        output = self.logSoftmax(x)
+        # return the output predictions
+        return output
 
 if __name__ == '__main__': 
     transform = transforms.Compose(
-        [transforms.ToTensor(),
+        [transforms.ToPILImage(),
+            transforms.ToTensor(),
+            transforms.Resize(64),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
     batch_size = 4
 
-    #replace this with our own dataset
-    trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
-                                            download=True, transform=transform)
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
-                                            shuffle=True, num_workers=2)
+    dataset = WildAnimals(transform=transform)
+    train_dataset, test_dataset = dataset.getDatasets()
 
-    testset = torchvision.datasets.CIFAR10(root='./data', train=False,
-                                        download=True, transform=transform)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
-                                            shuffle=False, num_workers=2)
+    trainloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
+                                            shuffle=True)
 
-    classes = ('plane', 'car', 'bird', 'cat',
-            'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
+    testloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
+                                            shuffle=False)
+
+    classes = ('Bighorn_Sheep', 'Bobcat', 'Coyote', 'Gray_Fox',
+            'Javelina', 'Mule_Deer', 'Raptor', 'White_tailed_Deer')
 
     # #show a few images (optional)
     def imshow(img):
@@ -65,13 +119,13 @@ if __name__ == '__main__':
     # # print labels
     # print(' '.join(f'{classes[labels[j]]:5s}' for j in range(batch_size)))
 
-    net = Net()
+    net = LeNet(3, 8)
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     net.to(device)
 
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+    lossFn = nn.NLLLoss()
+    optimizer = optim.Adam(net.parameters(), lr=0.001)
 
     #set this to an actual value
     for epoch in range(2):  # loop over the dataset multiple times
@@ -80,14 +134,17 @@ if __name__ == '__main__':
         for i, data in enumerate(trainloader, 0):
             # get the inputs; data is a list of [inputs, labels]
             inputs, labels = data
-            inputs, labels = inputs.to(device), labels.to(device)
+
+            #print(type(inputs))
+            inputs = inputs.to(device)
+            labels = labels.to(device)
 
             # zero the parameter gradients
             optimizer.zero_grad()
 
             # forward + backward + optimize
             outputs = net(inputs)
-            loss = criterion(outputs, labels)
+            loss = lossFn(outputs, labels)
             loss.backward()
             optimizer.step()
 
