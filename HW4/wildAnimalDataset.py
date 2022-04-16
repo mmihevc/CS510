@@ -12,7 +12,7 @@ import glob
 import cv2
 
 class WildAnimals(Dataset):
-    def __init__(self, transform=None):
+    def __init__(self, transform=None, chipMatches=["chip01"]):
         self.bigHornCount = 0
         self.bobcatCount = 0
         self.coyoteCount = 0
@@ -26,19 +26,13 @@ class WildAnimals(Dataset):
         file_list = glob.glob(self.imgs_path + "*")
 
         self.data = []
-        matches = [".jpg", ".JPG"]
         for file_path in file_list:
             file = file_path.split("\\")[-1]
-            if any(x in file for x in matches):
-                class_name = self.getClassName(file)
-                self.data.append([file_path, class_name])
-            else:    
-                for img_path in glob.glob(file_path + "/*.jpg"):
-                        file = img_path.split("\\")[-1]
-                        if any(x in file for x in matches):
-                                class_name = self.getClassName(file)
-                                self.data.append([img_path, class_name])
+            if any(x in file for x in chipMatches):
+                    class_name = self.getClassName(file)
+                    self.data.append([file_path, class_name])
 
+        print("Chip:" + str(chipMatches))
         print("Bighorn_Sheep:" + str(self.bigHornCount))
         print("Bobcat:" +  str(self.bobcatCount))
         print("Coyote:" +  str(self.coyoteCount))
@@ -70,7 +64,7 @@ class WildAnimals(Dataset):
         if(self.transform):
             image = self.transform(image)
         
-        return (image, y_label)
+        return (image, y_label, img_path)
     
     def getClassName(self, img_name):
         if "Bighorn_Sheep" in img_name:
@@ -99,11 +93,4 @@ class WildAnimals(Dataset):
             return "White_tailed_Deer"
         else:
             return "None"   
-
-    # todo look into other ways to split the datasets
-    def getDatasets(self):
-        train_size = int(0.8 * len(self.data))
-        test_size = len(self.data) - train_size
-        train_dataset, test_dataset = torch.utils.data.random_split(self.data, [train_size, test_size])
-        return train_dataset, test_dataset
 

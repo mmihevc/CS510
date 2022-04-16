@@ -24,17 +24,17 @@ for file_path in paths:
         file = file_path.split("\\")[-1]
         if any(x in file for x in matches):
             image = cv2.imread(file_path)
-            imgResized = cv2.resize(image, (64,64))
-            cv2.imwrite(f"resizedAnimals/{file}.jpg", imgResized)
+            imgResized = cv2.resize(image, (256,256))
+            cv2.imwrite(f"resizedAnimals/{file}", imgResized)
             cv2.imshow(f"resizedAnimals", imgResized)
             cv2.waitKey(30)
         else:    
-            for img_path in glob.glob(file_path + "/*.jpg"):
+            for img_path in glob.glob(file_path + "/*"):
                     file = img_path.split("\\")[-1]
                     if any(x in file for x in matches):
                             image = cv2.imread(img_path)
-                            imgResized = cv2.resize(image, (64,64))
-                            cv2.imwrite(f"resizedAnimals/{file}.jpg", imgResized)
+                            imgResized = cv2.resize(image, (256,256))
+                            cv2.imwrite(f"resizedAnimals/{file}", imgResized)
                             cv2.imshow(f"resizedAnimals", imgResized)
                             cv2.waitKey(30)
                             
