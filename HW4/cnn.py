@@ -1,5 +1,7 @@
 #sources: https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html
 #https://pyimagesearch.com/2021/07/19/pytorch-training-your-first-convolutional-neural-network-cnn/
+#https://www.w3schools.com/python/matplotlib_pie_charts.asp
+#https://github.com/aladdinpersson/Machine-Learning-Collection 
 
 from random import shuffle
 import torch
@@ -12,6 +14,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import os
 import shutil
+import glob
 import cv2
 from sklearn.model_selection import KFold
 from sklearn.metrics import f1_score 
@@ -25,11 +28,19 @@ def ensure_dir(directory):
 
 if os.path.exists("trainingIncorrect"):
     shutil.rmtree("trainingIncorrect")
-ensure_dir("trainingIncorrect")
+ensure_dir(os.path.join("trainingIncorrect", "epoch1"))
+ensure_dir(os.path.join("trainingIncorrect", "epoch2"))
+ensure_dir(os.path.join("trainingIncorrect", "epoch3"))
+ensure_dir(os.path.join("trainingIncorrect", "epoch4"))
+ensure_dir(os.path.join("trainingIncorrect", "epoch5"))
 
 if os.path.exists("trainingCorrect"):
     shutil.rmtree("trainingCorrect")
-ensure_dir("trainingCorrect")
+ensure_dir(os.path.join("trainingCorrect", "epoch1"))
+ensure_dir(os.path.join("trainingCorrect", "epoch2"))
+ensure_dir(os.path.join("trainingCorrect", "epoch3"))
+ensure_dir(os.path.join("trainingCorrect", "epoch4"))
+ensure_dir(os.path.join("trainingCorrect", "epoch5"))
 
 if os.path.exists("testingIncorrect"):
     shutil.rmtree("testingIncorrect")
@@ -103,7 +114,7 @@ if __name__ == '__main__':
     imageCount = 0
 
     datasetChip1 = WildAnimals(transform=transform)
-    datasetChipOthers = WildAnimals(transform=transform, chipMatches=["chip02", "chip03", "chip04", "chip05", "chip06"])
+    datasetChipOthers = WildAnimals(transform=transform, chipMatches=["chip02", "chip03", "chip04", "chip05", "chip06"], datasetLabel="Test")
 
     trainloader = torch.utils.data.DataLoader(datasetChip1, batch_size=batch_size, shuffle=True)
 
@@ -147,13 +158,13 @@ if __name__ == '__main__':
                 time = imgPath.split("_")[-1].split(".")[-2]
                 if label == prediction:
                     image = cv2.imread(imgPath)
-                    cv2.imwrite(f"trainingCorrect/l_{classes[label]}_p_{classes[prediction]}_t_{time}_{imageCount}.jpg", image)
+                    cv2.imwrite(f"trainingCorrect/epoch{epoch + 1}/l_{classes[label]}_p_{classes[prediction]}_t_{time}_{imageCount}.jpg", image)
                     imageCount += 1
                     # cv2.imshow(f"trainingCorrect", image)
                     # cv2.waitKey(30)
                 else:
                     image = cv2.imread(imgPath)
-                    cv2.imwrite(f"trainingIncorrect/l_{classes[label]}_p_{classes[prediction]}_t_{time}_{imageCount}.jpg", image)
+                    cv2.imwrite(f"trainingIncorrect/epoch{epoch + 1}/l_{classes[label]}_p_{classes[prediction]}_t_{time}_{imageCount}.jpg", image)
                     imageCount += 1
                     # cv2.imshow(f"trainingIncorrect", image)
                     # cv2.waitKey(30)
@@ -164,11 +175,10 @@ if __name__ == '__main__':
 
         # https://simonhessner.de/why-are-precision-recall-and-f1-score-equal-when-using-micro-averaging-in-a-multi-class-problem/
         # since micro averaging does not distinguish between different classes and then just averages their metric scores, this averaging scheme is not prone to inaccurate values due to an unequally distributed test set
-        print(f'[{epoch + 1}] loss: {running_loss:3f} correct:{running_corrects}')
+        print(f'\n[{epoch + 1}] loss: {running_loss:3f} correct:{running_corrects}')
         print("F1 Score : ", f1_score(labels.cpu().data, predictions.cpu(), average='micro'))
         print("Precision Score : ", precision_score(labels.cpu().data, predictions.cpu(), average='micro'))
         print("Recall Score : ",recall_score(labels.cpu().data, predictions.cpu(), average='micro'))
-        print("\n")
 
     print('Finished Training\n')
 
@@ -197,14 +207,10 @@ if __name__ == '__main__':
                     image = cv2.imread(imgPath)
                     cv2.imwrite(f"testingCorrect/l_{classes[label]}_p_{classes[prediction]}_t_{time}_{imageCount}.jpg", image)
                     imageCount += 1
-                    # cv2.imshow(f"trainingCorrect", image)
-                    # cv2.waitKey(30)
                 else:
                     image = cv2.imread(imgPath)
                     cv2.imwrite(f"testingIncorrect/l_{classes[label]}_p_{classes[prediction]}_t_{time}_{imageCount}.jpg", image)
                     imageCount += 1
-                    # cv2.imshow(f"trainingIncorrect", image)
-                    # cv2.waitKey(30)
                 total_pred[classes[label]] += 1
 
             #should we put this in a chart somehow? matplotlib.pyplot as plt
@@ -214,6 +220,64 @@ if __name__ == '__main__':
             print("Recall Score : ",recall_score(labels.cpu().data, predictions.cpu(), average='micro'))
             print("\n")
 
+    # read back in output data from predictions to look for trends
+    # https://intellipaat.com/blog/tutorial/python-tutorial/python-matplotlib/
+
+    #read back in the outputs to create charts
+    def returnDatNightStats (imgs_path):
+        dayCount = 0
+        nightCount = 0
+        total = 0
+        file_list = glob.glob(imgs_path + "*")
+        for file_path in file_list:
+            file = file_path.split(os.sep)[-1]
+            if "day" in file:
+                    dayCount += 1
+            if "night" in file:
+                    nightCount += 1
+            total += 1
+        return dayCount, nightCount, total
+
+    dayCountIn, nightCountIn, totalIn = returnDatNightStats("testingIncorrect" + os.sep)
+    dayCountCor, nightCountCor, totalCor = returnDatNightStats("testingCorrect" + os.sep)
+
+    total = totalIn + totalCor
+    dayPercentIn = (dayCountIn / total) * 100
+    nightPercentIn = (nightCountIn / total) * 100
+    dayPercentCor = (dayCountCor / total) * 100
+    nightPercentCor = (nightCountCor / total) * 100
+    y = np.array([dayPercentCor, dayPercentIn, nightPercentCor, nightPercentIn])
+    labels = [f"Day Correct\n{dayPercentCor:.2f}%",
+    f"Day Incorrect\n{dayPercentIn:.2f}%",
+    f"Night Correct\n{nightPercentCor:.2f}%",
+    f"Night Incorrect\n{nightPercentIn:.2f}%"]
+
+    plt.pie(y, labels = labels)
+    plt.title(f"Testing Predictions, Total Images: {total}")
+    plt.savefig('testPredictions.png')
+    plt.close()
+
+    for epoch in range(5):
+        
+        dayCountIn, nightCountIn, totalIn = returnDatNightStats(os.path.join("trainingIncorrect", f"epoch{epoch + 1}") + os.sep)
+        dayCountCor, nightCountCor, totalCor = returnDatNightStats(os.path.join("trainingCorrect", f"epoch{epoch + 1}") + os.sep)
+
+        total = totalIn + totalCor
+        dayPercentIn = (dayCountIn / total) * 100
+        nightPercentIn = (nightCountIn / total) * 100
+        dayPercentCor = (dayCountCor / total) * 100
+        nightPercentCor = (nightCountCor / total) * 100
+        y = np.array([dayPercentCor, dayPercentIn, nightPercentCor, nightPercentIn])
+        labels = [f"Day Correct\n{dayPercentCor:.2f}%",
+        f"Day Incorrect\n{dayPercentIn:.2f}%",
+        f"Night Correct\n{nightPercentCor:.2f}%",
+        f"Night Incorrect\n{nightPercentIn:.2f}%"]
+
+        plt.pie(y, labels = labels)
+        plt.title(f"Training Predictions Epoch {epoch + 1}, Total Images: {total}")
+        plt.savefig(f'trainingPredictionsEpoch{epoch + 1}.png')
+        plt.close()
+
     # print accuracy for each class
     for classname, correct_count in correct_pred.items():
         if total_pred[classname] == 0:
@@ -221,6 +285,3 @@ if __name__ == '__main__':
         else:
             accuracy = 100 * float(correct_count) / total_pred[classname]
         print(f'Accuracy for class: {classname:5s} is {accuracy:.1f} %')
-
-#TODO read back in output data from predictions to look for trends
-#TODO add scores to plots, epochs for x axis?: https://intellipaat.com/blog/tutorial/python-tutorial/python-matplotlib/

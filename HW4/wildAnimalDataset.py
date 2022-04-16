@@ -1,8 +1,5 @@
-"""
-Sources: examples from this collection: https://github.com/aladdinpersson/Machine-Learning-Collection
-"""
-
 import os
+from turtle import color
 import pandas as pd
 import torch
 import skimage
@@ -10,9 +7,11 @@ from torch.utils.data import Dataset
 from skimage import io
 import glob
 import cv2
+import matplotlib.pyplot as plt
+import numpy as np
 
 class WildAnimals(Dataset):
-    def __init__(self, transform=None, chipMatches=["chip01"]):
+    def __init__(self, transform=None, chipMatches=["chip01"], datasetLabel = "Train"):
         self.bigHornCount = 0
         self.bobcatCount = 0
         self.coyoteCount = 0
@@ -21,17 +20,23 @@ class WildAnimals(Dataset):
         self.muleDeerCount = 0
         self.raptorCount = 0
         self.whiteTailCount = 0
-        self.imgs_path = "resizedAnimals\\"
+        self.dayCount = 0
+        self.nightCount = 0
+        self.total = 0
+        self.datasetLabel = datasetLabel
+        self.imgs_path = "resizedAnimals" + os.sep
         self.transform = transform
         file_list = glob.glob(self.imgs_path + "*")
 
         self.data = []
         for file_path in file_list:
-            file = file_path.split("\\")[-1]
+            file = file_path.split(os.sep)[-1]
             if any(x in file for x in chipMatches):
                     class_name = self.getClassName(file)
+                    self.updateDayNightStats(file)
                     self.data.append([file_path, class_name])
 
+        print(f"\n{datasetLabel}")
         print("Chip:" + str(chipMatches))
         print("Bighorn_Sheep:" + str(self.bigHornCount))
         print("Bobcat:" +  str(self.bobcatCount))
@@ -41,6 +46,11 @@ class WildAnimals(Dataset):
         print("Mule_Deer:" +  str(self.muleDeerCount))
         print("Raptor:" +  str(self.raptorCount))
         print("White_tailed_Deer:" +  str(self.whiteTailCount))
+        print("Day:" +  str(self.dayCount))
+        print("Night:" +  str(self.nightCount))
+        print("Total:" +  str(self.total))
+
+        self.saveDistrubution()
 
         self.class_map = {
         "Bighorn_Sheep" : 0,
@@ -92,5 +102,27 @@ class WildAnimals(Dataset):
             self.whiteTailCount += 1
             return "White_tailed_Deer"
         else:
-            return "None"   
+            return "None"  
+            
+    #read back in the outputs to create charts
+    def updateDayNightStats (self, img_name):
+        if "day" in img_name:
+                self.dayCount += 1
+        if "night" in img_name:
+                self.nightCount += 1
+        self.total += 1
+
+    def saveDistrubution(self):
+        dayPercent = (self.dayCount / self.total) * 100
+        nightPercent = (self.nightCount / self.total) * 100
+        y = np.array([dayPercent, nightPercent])
+        labels = [f"Day {dayPercent:.2f}%", f"Night {nightPercent:.2f}%"]
+        colors = ["yellow", "black"]
+
+        plt.pie(y, labels = labels, colors=colors)
+        plt.title(f"{self.datasetLabel} Time of Day Distribution, Total Images: {self.total}")
+        plt.savefig(f'{self.datasetLabel}DataDistrubution.png')
+        plt.close()
+        
+        #we could also add one for the animal distrubution
 

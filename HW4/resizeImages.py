@@ -14,6 +14,7 @@ def ensure_dir(directory):
 
 #CHANGE THIS
 inputFolder = "C:\\Users\\Devin\\Desktop\\GitHub\\cs510chips\\"
+#inputFolder = "/Users/maddiemihevc/IdeaProjects/CS510/HW4/cs510chips/"
 if os.path.exists("resizedAnimals"):
     shutil.rmtree("resizedAnimals")
 ensure_dir("resizedAnimals")
@@ -21,7 +22,7 @@ ensure_dir("resizedAnimals")
 paths = glob.glob(inputFolder + "*")
 matches = [".jpg", ".JPG"]
 for file_path in paths:
-        file = file_path.split("\\")[-1]
+        file = file_path.split(os.sep)[-1]
         if any(x in file for x in matches):
             image = cv2.imread(file_path)
             imgResized = cv2.resize(image, (256,256))
@@ -30,7 +31,7 @@ for file_path in paths:
             cv2.waitKey(30)
         else:    
             for img_path in glob.glob(file_path + "/*"):
-                    file = img_path.split("\\")[-1]
+                    file = img_path.split(os.sep)[-1]
                     if any(x in file for x in matches):
                             image = cv2.imread(img_path)
                             imgResized = cv2.resize(image, (256,256))
