@@ -9,9 +9,16 @@ import glob
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+from torchvision import transforms
+from fastai import *
+from fastai.vision import *
+from fastai.layers import MSELossFlat, CrossEntropyFlat
+from torchvision import transforms
+import warnings
+warnings.filterwarnings("ignore")
 
 class WildAnimals(Dataset):
-    def __init__(self, transform=None, chipMatches=["chip01"], datasetLabel = "Train"):
+    def __init__(self, transform=None, chipMatches=["chip01"], datasetLabel = "Train", size=64):
         self.bigHornCount = 0
         self.bobcatCount = 0
         self.coyoteCount = 0
@@ -27,6 +34,8 @@ class WildAnimals(Dataset):
         self.imgs_path = "resizedAnimals" + os.sep
         self.transform = transform
         file_list = glob.glob(self.imgs_path + "*")
+        self.norm = transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]) #imagenet stats
+        self.size = size
 
         self.data = []
         for file_path in file_list:
@@ -63,46 +72,66 @@ class WildAnimals(Dataset):
         "White_tailed_Deer": 7
         }
 
+        self.day_map = {
+        "day" : 0,
+        "night": 1
+        }
+
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, index):
-        img_path, class_name = self.data[index]
-        image = io.imread(img_path)
-        y_label = torch.tensor(self.class_map[class_name])
+        img_path, label = self.data[index]
 
-        if(self.transform):
-            image = self.transform(image)
+        img = PIL.Image.open(img_path).convert('RGB')
+        img = Image(pil2tensor(img, dtype=np.float32).div_(255))
+        img = img.apply_tfms(self.transform, size = self.size)
+        img = self.norm(img.data)
         
-        return (image, y_label, img_path)
+        labels = label.split("/")
+        # y_label = torch.tensor(self.class_map[labels[0]])
+        # day_label = torch.tensor(self.day_map[labels[1]])
+
+        y_label = torch.tensor(int(self.class_map[labels[0]]), dtype=torch.int64)
+        day_label = torch.tensor(int(self.day_map[labels[1]]), dtype=torch.int64)
+        
+        return img.data, (y_label, day_label)
     
     def getClassName(self, img_name):
+        label = ''
         if "Bighorn_Sheep" in img_name:
             self.bigHornCount += 1
-            return "Bighorn_Sheep"
+            label = "Bighorn_Sheep"
         elif "Bobcat" in img_name:
             self.bobcatCount += 1
-            return "Bobcat"
+            label = "Bobcat"
         elif "Coyote" in img_name:
             self.coyoteCount += 1
-            return "Coyote"
+            label = "Coyote"
         elif "Gray_Fox" in img_name:
             self.grayFoxCount += 1
-            return "Gray_Fox"
+            label = "Gray_Fox"
         elif "Javelina" in img_name:
             self.javelinaCount += 1
-            return "Javelina"
+            label = "Javelina"
         elif "Mule_Deer" in img_name:
             self.muleDeerCount += 1
-            return "Mule_Deer"
+            label = "Mule_Deer"
         elif "Raptor" in img_name:
             self.raptorCount += 1
-            return "Raptor"
+            label = "Raptor"
         elif "White_tailed_Deer" in img_name:
             self.whiteTailCount += 1
-            return "White_tailed_Deer"
+            label = "White_tailed_Deer"
         else:
-            return "None"  
+            return
+
+        if "day" in img_name:
+                label += "/day"
+        elif "night" in img_name:
+                label += "/night"
+
+        return label
             
     #read back in the outputs to create charts
     def updateDayNightStats (self, img_name):

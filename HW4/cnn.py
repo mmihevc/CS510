@@ -21,6 +21,12 @@ from sklearn.metrics import f1_score
 from sklearn.metrics import precision_score
 from sklearn.metrics import recall_score
 from wildAnimalDataset import WildAnimals
+from fastai import *
+from fastai.vision import *
+from fastai.layers import MSELossFlat, CrossEntropyFlat
+from torchvision import transforms
+import warnings
+warnings.filterwarnings("ignore")
 
 def ensure_dir(directory):
     if not os.path.exists(directory):
@@ -50,58 +56,102 @@ if os.path.exists("testingCorrect"):
     shutil.rmtree("testingCorrect")
 ensure_dir("testingCorrect")
 
-class CNN(nn.Module):
-    def __init__(self, numChannels, classes):
-        # call the parent constructor
-        super(CNN, self).__init__()
-        self.flatten = nn.Flatten()
 
-        # initialize first set of CONV => RELU => POOL layers
-        self.conv1 = nn.Conv2d(in_channels=numChannels, out_channels=20,
-            kernel_size=(5, 5))
-        self.relu1 = nn.ReLU()
-        self.maxpool1 = nn.MaxPool2d(kernel_size=(2, 2), stride=(2, 2))
+class MultiTaskLossWrapper(nn.Module):
+    def __init__(self, task_num):
+        super(MultiTaskLossWrapper, self).__init__()
+        self.task_num = task_num
+        self.log_vars = nn.Parameter(torch.zeros((task_num)))
 
-        # initialize second set of CONV => RELU => POOL layers
-        self.conv2 = nn.Conv2d(in_channels=20, out_channels=50,
-            kernel_size=(5, 5))
-        self.relu2 = nn.ReLU()
-        self.maxpool2 = nn.MaxPool2d(kernel_size=(2, 2), stride=(2, 2))
+    def forward(self, preds, type, day):
 
-        # initialize first (and only) set of FC => RELU layers
-        # where does this number come from?
-        self.fc1 = nn.Linear(in_features=186050, out_features=500)
-        self.relu3 = nn.ReLU()
+        mse, crossEntropy = MSELossFlat(), CrossEntropyFlat()
 
-        # initialize our softmax classifier
-        self.fc2 = nn.Linear(in_features=500, out_features=classes)
-        self.logSoftmax = nn.LogSoftmax(dim=1)
+        loss0 = mse(preds[0], type)
+        loss1 = crossEntropy(preds[1],day)
 
-    def forward(self, x):
-        # pass the input through our first set of CONV => RELU =>
-        # POOL layers
-        x = self.conv1(x)
-        x = self.relu1(x)
-        x = self.maxpool1(x)
+        precision0 = torch.exp(-self.log_vars[0])
+        loss0 = precision0*loss0 + self.log_vars[0]
 
-        # pass the output from the previous layer through the second
-        # set of CONV => RELU => POOL layers
-        x = self.conv2(x)
-        x = self.relu2(x)
-        x = self.maxpool2(x)
+        precision1 = torch.exp(-self.log_vars[1])
+        loss1 = precision1*loss1 + self.log_vars[1]
+        
+        return loss0+loss1
 
-        # flatten the output from the previous layer and pass it
-        # through our only set of FC => RELU layers
-        x = self.flatten(x)
-        x = self.fc1(x)
-        x = self.relu3(x)
+# model code came from this really helpful tutorial: https://pyimagesearch.com/2021/07/19/pytorch-training-your-first-convolutional-neural-network-cnn/
+# We also made some tweaks to work correctly with our images namely the in features
+# class CNN(nn.Module):
+#     def __init__(self, numChannels, classes):
+#         # call the parent constructor
+#         super(CNN, self).__init__()
+#         self.flatten = nn.Flatten()
 
-        # pass the output to our softmax classifier to get our output
-        # predictions
-        x = self.fc2(x)
-        output = self.logSoftmax(x)
-        # return the output predictions
-        return output
+#         # initialize first set of CONV => RELU => POOL layers
+#         self.conv1 = nn.Conv2d(in_channels=numChannels, out_channels=20,
+#             kernel_size=(5, 5))
+#         self.relu1 = nn.ReLU()
+#         self.maxpool1 = nn.MaxPool2d(kernel_size=(2, 2), stride=(2, 2))
+
+#         # initialize second set of CONV => RELU => POOL layers
+#         self.conv2 = nn.Conv2d(in_channels=20, out_channels=50,
+#             kernel_size=(5, 5))
+#         self.relu2 = nn.ReLU()
+#         self.maxpool2 = nn.MaxPool2d(kernel_size=(2, 2), stride=(2, 2))
+
+#         # initialize first (and only) set of FC => RELU layers
+#         # where does this number come from?
+#         self.fc1 = nn.Linear(in_features=186050, out_features=500)
+#         self.relu3 = nn.ReLU()
+
+#         # initialize our softmax classifier
+#         self.fc2 = nn.Linear(in_features=500, out_features=classes)
+#         self.logSoftmax = nn.LogSoftmax(dim=1)
+
+#     def forward(self, x):
+#         # pass the input through our first set of CONV => RELU =>
+#         # POOL layers
+#         x = self.conv1(x)
+#         x = self.relu1(x)
+#         x = self.maxpool1(x)
+
+#         # pass the output from the previous layer through the second
+#         # set of CONV => RELU => POOL layers
+#         x = self.conv2(x)
+#         x = self.relu2(x)
+#         x = self.maxpool2(x)
+
+#         # flatten the output from the previous layer and pass it
+#         # through our only set of FC => RELU layers
+#         x = self.flatten(x)
+#         x = self.fc1(x)
+#         x = self.relu3(x)
+
+#         # pass the output to our softmax classifier to get our output
+#         # predictions
+#         x = self.fc2(x)
+#         output = self.logSoftmax(x)
+#         # return the output predictions
+#         return output
+
+class MultiTaskModel(nn.Module):
+    """
+    Creates a MTL model with the encoder from "arch" and with dropout multiplier ps.
+    """
+    def __init__(self, arch,ps=0.5):
+        super(MultiTaskModel,self).__init__()
+        self.encoder = create_body(arch)        #fastai function that creates an encoder given an architecture
+        self.fc1 = create_head(1024,1,ps=ps)    #fastai function that creates a head
+        self.fc2 = create_head(1024,2,ps=ps)
+        #self.fc3 = create_head(1024,5,ps=ps)
+
+    def forward(self,x):
+
+        x = self.encoder(x)
+        age = torch.sigmoid(self.fc1(x))
+        gender = self.fc2(x)
+        ethnicity = self.fc3(x)
+
+        return [age, gender, ethnicity]
 
 if __name__ == '__main__': 
     transform = transforms.Compose(
@@ -123,6 +173,8 @@ if __name__ == '__main__':
     classes = ('Bighorn_Sheep', 'Bobcat', 'Coyote', 'Gray_Fox',
             'Javelina', 'Mule_Deer', 'Raptor', 'White_tailed_Deer')
 
+    timesOfDay = ('day', 'night')
+
     net = CNN(3, 8)
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     net.to(device)
@@ -136,18 +188,19 @@ if __name__ == '__main__':
 
         for batchId, data in enumerate(trainloader, 0):
             # get the inputs; data is a list of [inputs, labels]
-            inputs, labels, imgPath = data
+            inputs, labels, dayLabels, imgPath = data
 
             #print(type(inputs))
             inputs = inputs.to(device)
             labels = labels.to(device)
+            dayLabels = dayLabels.to(device)
 
             # zero the parameter gradients
             optimizer.zero_grad()
 
             # forward + backward + optimize
             outputs = net(inputs)
-            loss = lossFn(outputs, labels)
+            loss = lossFn(outputs, labels, dayLabels)
             loss.backward()
             optimizer.step()
 
@@ -184,6 +237,7 @@ if __name__ == '__main__':
 
     dataiter = iter(testloader)
     images, labels, _ = dataiter.next()
+    fone_scores = []
 
     # again no gradients needed
     with torch.no_grad():
@@ -214,11 +268,23 @@ if __name__ == '__main__':
                 total_pred[classes[label]] += 1
 
             #should we put this in a chart somehow? matplotlib.pyplot as plt
+            f1Score = f1_score(labels.cpu().data, predictions.cpu(), average='micro')
+            fone_scores.append(f1Score)
             print(f'[{batchId + 1}]')
-            print("F1 Score : ", f1_score(labels.cpu().data, predictions.cpu(), average='micro'))
+            print("F1 Score : ", f1Score)
             print("Precision Score : ", precision_score(labels.cpu().data, predictions.cpu(), average='micro'))
             print("Recall Score : ",recall_score(labels.cpu().data, predictions.cpu(), average='micro'))
             print("\n")
+
+    # Build F1 Score line graph
+    batch_x = np.arange(1, 14)
+    f1 = np.array(fone_scores)
+    plt.title("Testing F1 Scores")
+    plt.xlabel("Batch ID")
+    plt.ylabel("F1 Score")
+    plt.plot(batch_x, f1)
+    plt.savefig(f'testingF1Scores.png')
+    plt.close()
 
     # read back in output data from predictions to look for trends
     # https://intellipaat.com/blog/tutorial/python-tutorial/python-matplotlib/
