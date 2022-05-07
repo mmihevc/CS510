@@ -12,8 +12,46 @@ def ensure_dir(directory):
     if not os.path.exists(directory):
         os.makedirs(directory)
 
+def getClassName(self, img_name):
+    label = ''
+    if "Bighorn_Sheep" in img_name:
+        self.bigHornCount += 1
+        label = "Bighorn_Sheep"
+    elif "Bobcat" in img_name:
+        self.bobcatCount += 1
+        label = "Bobcat"
+    elif "Coyote" in img_name:
+        self.coyoteCount += 1
+        label = "Coyote"
+    elif "Gray_Fox" in img_name:
+        self.grayFoxCount += 1
+        label = "Gray_Fox"
+    elif "Javelina" in img_name:
+        self.javelinaCount += 1
+        label = "Javelina"
+    elif "Mule_Deer" in img_name:
+        self.muleDeerCount += 1
+        label = "Mule_Deer"
+    elif "Raptor" in img_name:
+        self.raptorCount += 1
+        label = "Raptor"
+    elif "White_tailed_Deer" in img_name:
+        self.whiteTailCount += 1
+        label = "White_tailed_Deer"
+    else:
+        return
+
+    values = img_name.split("_")
+    hour = int(values[values.length - 3])
+    if hour < 7 or hour > 19:
+            label += "/day"
+    else:
+            label += "/night"
+
+    return label
+
 #CHANGE THIS
-inputFolder = "C:\\Users\\Devin\\Desktop\\GitHub\\cs510chips\\"
+inputFolder = "C:\Users\Devin\Desktop\ImageComp\CS510\cs510bmgr8"
 #inputFolder = "/Users/maddiemihevc/IdeaProjects/CS510/HW4/cs510chips/"
 if os.path.exists("resizedAnimals"):
     shutil.rmtree("resizedAnimals")

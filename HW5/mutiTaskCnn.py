@@ -1,3 +1,4 @@
+from logging.handlers import BaseRotatingHandler
 from random import shuffle
 import torch
 import torchvision
@@ -30,6 +31,7 @@ warnings.filterwarnings("ignore")
 
 
 # Followed this example: https://towardsdatascience.com/multi-task-learning-with-pytorch-and-fastai-6d10dc7ce855
+# https://iconof.com/1cycle-learning-rate-policy/ 
 class MultiTaskModel(nn.Module):
     def __init__(self, arch,ps=0.5):
         super(MultiTaskModel,self).__init__()
@@ -68,29 +70,43 @@ class MultiTaskLossWrapper(nn.Module):
         
         return loss0+loss1
 
+class Predictor():
+    def __init__(self, model):
+        self.model = model
+        self.tfms = get_transforms()[1]
+        self.norm = transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]) #imagenet stats
+        self.timeOfDay = {0:"day",1:"night"}
+        self.typeOfAnimal = {0:"Bighorn_Sheep",1:"Bobcat",2:"Coyote",3:"Gray_Fox",4:"Javelina",
+        5:"Mule_Deer", 6:"Raptor", 7:"White_tailed_Deer"}
+
+    def predict(self,x):
+        #x is a PIL Image
+        x = Image(pil2tensor(x, dtype=np.float32).div_(255))
+        x = x.apply_tfms(self.tfms, size = 64)
+        x = self.norm(x.data)
+        preds = self.model(x.unsqueeze(0))
+        classType = self.typeOfAnimal[torch.softmax(preds[0],1).argmax().item()]
+        time = self.timeOfDay[torch.softmax(preds[1],1).argmax().item()]
+        return classType, time
+
 if __name__ == '__main__': 
     batch_size = 16
     imageCount = 0
     tfms = get_transforms()
 
     datasetChip1 = WildAnimals(transform=tfms[0])
-    datasetChipOthers = WildAnimals(transform=tfms[1], chipMatches=["chip02", "chip03", "chip04", "chip05", "chip06"], datasetLabel="Test")
+    datasetChipOthers = WildAnimals(transform=tfms[1], datasetLabel="Test")
 
     trainloader = torch.utils.data.DataLoader(datasetChip1, batch_size=batch_size, shuffle=True)
     testloader = torch.utils.data.DataLoader(datasetChipOthers, batch_size=batch_size, shuffle=True)
-    data = DataBunch(trainloader, testloader)
-
-
-    classes = ('Bighorn_Sheep', 'Bobcat', 'Coyote', 'Gray_Fox',
-            'Javelina', 'Mule_Deer', 'Raptor', 'White_tailed_Deer')
-
-    timesOfDay = ('day', 'night')
+    data = DataBunch(train_dl=trainloader, valid_dl=trainloader, test_dl=testloader)
 
     def acc_class_type(preds, classType, time): return accuracy(preds[0], classType)
     def acc_time(preds, classType, time): return accuracy(preds[1], time)
     metrics = [acc_class_type, acc_time]
 
     model = MultiTaskModel(models.resnet34, ps=0.25)
+    #model.eval()
 
     loss_func = MultiTaskLossWrapper(2).to(data.device) #just making sure the loss is on the gpu
 
@@ -107,18 +123,89 @@ if __name__ == '__main__':
     print(torch.cuda.get_device_name())
     print(torch.cuda.get_device_properties(0))
 
-    # learn.lr_find()
-    # learn.recorder.plot()
-    # plt.savefig('test.png')
-
     learn.fit_one_cycle(5,max_lr=1e-2,
                     callbacks=[callbacks.SaveModelCallback(learn, every='improvement', monitor='valid_loss', name='stage-1')])
 
     learn.load("stage-1")
     learn.unfreeze()
-    # learn.lr_find()
-    # learn.recorder.plot()
-    # plt.savefig('test2.png')
 
-    preds, y, losses = learn.get_preds(ds_type=DatasetType.Test, with_loss=True)
-    y = torch.argmax(preds, dim=1)
+    def PredictTestSet(pred):
+        correctAnimal = 0
+        incorrectAnimal = 0
+        correctTime = 0
+        incorrectTime = 0
+        bothCorrect = 0
+        oneIncorrect = 0
+        inputFolder = "resizedAnimals\\Test"
+        paths = glob.glob(inputFolder + "*")
+        for class_path in paths:
+            for img_path in glob.glob(class_path + "/*.jpg"):
+                try:
+                    img = PIL.Image.open(img_path)
+                    predAnimal, predTime = pred.predict(img)
+
+                    labels = img_path.split("\\")[-1].split("-")
+                    actualAnimal = labels[0]
+                    actualTime = labels[1]
+
+                    if(predAnimal == actualAnimal):
+                        correctAnimal += 1
+                    else:
+                        incorrectAnimal += 1
+
+                    if(predTime == actualTime):
+                        correctTime += 1
+                    else:
+                        incorrectTime += 1
+
+                    if(predAnimal == actualAnimal and predTime == actualTime):
+                        bothCorrect += 1
+                    else:
+                        oneIncorrect += 1
+                except:
+                    print("An exception occurred")
+
+        return correctAnimal, incorrectAnimal, correctTime, incorrectTime, bothCorrect, oneIncorrect
+
+    trained_model = learn.model.cpu()
+    pred = Predictor(trained_model)
+    correctAnimal, incorrectAnimal, correctTime, incorrectTime, bothCorrect, oneIncorrect = PredictTestSet(pred)
+
+    total = correctAnimal + incorrectAnimal
+    animalPercentIn = (incorrectAnimal / total) * 100
+    animalPercentCor = (correctAnimal / total) * 100
+
+    y = np.array([animalPercentCor, animalPercentIn])
+    labels = [f"Animal Correct\n{animalPercentCor:.2f}%",
+    f"Animal Incorrect\n{animalPercentIn:.2f}%"]
+
+    plt.pie(y, labels = labels)
+    plt.title(f"Testing Predictions Animals, Total Images: {total}")
+    plt.savefig('testPredictionsAnimals.png')
+    plt.close()
+
+    total = bothCorrect + oneIncorrect
+    bothPercentIn = (oneIncorrect / total) * 100
+    bothPercentCor = (bothCorrect / total) * 100
+
+    y = np.array([bothPercentCor, bothPercentIn])
+    labels = [f"Both Correct\n{bothPercentCor:.2f}%",
+    f"At least one Incorrect\n{bothPercentIn:.2f}%"]
+
+    plt.pie(y, labels = labels)
+    plt.title(f"Testing Predictions Both Classes, Total Images: {total}")
+    plt.savefig('testPredictionsBothClasses.png')
+    plt.close()
+
+    total = correctTime + incorrectTime
+    timePercentIn = (incorrectTime / total) * 100
+    timePercentCor = (correctTime / total) * 100
+
+    y = np.array([timePercentCor, timePercentIn])
+    labels = [f"Time Correct\n{timePercentCor:.2f}%",
+    f"Time Incorrect\n{timePercentIn:.2f}%"]
+
+    plt.pie(y, labels = labels)
+    plt.title(f"Testing Predictions Time of Day, Total Images: {total}")
+    plt.savefig('testPredictionsTimeOfDay.png')
+    plt.close()

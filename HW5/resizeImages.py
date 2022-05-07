@@ -48,7 +48,8 @@ inputFolder = "C:\\Users\\Devin\\Desktop\\ImageComp\\CS510\\cs510bmgr8"
 #inputFolder = "/Users/maddiemihevc/IdeaProjects/CS510/HW4/cs510chips/"
 # if os.path.exists("resizedAnimals"):
 #     shutil.rmtree("resizedAnimals")
-ensure_dir("resizedAnimals")
+ensure_dir("resizedAnimals\\Test")
+ensure_dir("resizedAnimals\\Train")
 
 paths = glob.glob(inputFolder + "*")
 matches = [".jpg", ".JPG"]
@@ -61,8 +62,13 @@ for class_path in paths:
             image = cv2.imread(img_path)
             imgResized = cv2.resize(image, (256,256))
             label = getClassName(img_path) + f"-{str(count)}"
-            if not cv2.imwrite(f"resizedAnimals/{label}.jpg", imgResized):
-                raise Exception("Could not write image")
+
+            if any(x in label for x in ["chip02", "chip03", "chip04", "chip05", "chip06"]):
+                if not cv2.imwrite(f"resizedAnimals/Test/{label}.jpg", imgResized):
+                    raise Exception("Could not write image")
+            else:
+                if not cv2.imwrite(f"resizedAnimals/Train/{label}.jpg", imgResized):
+                    raise Exception("Could not write image")
             
             count += 1
             # cv2.imshow(f"{label}", imgResized)

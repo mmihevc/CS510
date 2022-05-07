@@ -18,7 +18,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 class WildAnimals(Dataset):
-    def __init__(self, transform=None, chipMatches=["chip01"], datasetLabel = "Train", size=64):
+    def __init__(self, transform=None, datasetLabel = "Train", size=64):
         self.bigHornCount = 0
         self.bobcatCount = 0
         self.coyoteCount = 0
@@ -31,7 +31,7 @@ class WildAnimals(Dataset):
         self.nightCount = 0
         self.total = 0
         self.datasetLabel = datasetLabel
-        self.imgs_path = "resizedAnimals" + os.sep
+        self.imgs_path = "resizedAnimals" + os.sep + datasetLabel + os.sep
         self.transform = transform
         file_list = glob.glob(self.imgs_path + "*")
         self.norm = transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]) #imagenet stats
@@ -40,12 +40,12 @@ class WildAnimals(Dataset):
         self.data = []
         for file_path in file_list:
             file = file_path.split(os.sep)[-1]
-            if any(x in file for x in chipMatches):
-                    self.updateStats(file)
-                    self.data.append([file_path, file])
+            #if any(x in file for x in chipMatches):
+            self.updateStats(file)
+            self.data.append([file_path, file])
 
         print(f"\n{datasetLabel}")
-        print("Chip:" + str(chipMatches))
+        #print("Chip:" + str(chipMatches))
         print("Bighorn_Sheep:" + str(self.bigHornCount))
         print("Bobcat:" +  str(self.bobcatCount))
         print("Coyote:" +  str(self.coyoteCount))

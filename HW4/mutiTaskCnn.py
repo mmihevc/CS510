@@ -23,6 +23,12 @@ from torchvision import transforms
 import warnings
 warnings.filterwarnings("ignore")
 
+# things to write about in our paper
+# multi task training
+# FastAI
+# dataset and results
+
+
 # Followed this example: https://towardsdatascience.com/multi-task-learning-with-pytorch-and-fastai-6d10dc7ce855
 class MultiTaskModel(nn.Module):
     def __init__(self, arch,ps=0.5):
