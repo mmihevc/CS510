@@ -1,0 +1,48 @@
+PS C:\Users\Devin\Desktop\ImageComp\CS510\HW5>  & 'C:\Users\Devin\anaconda3\envs\termProject\python.exe' 'c:\Users\Devin\.vscode\extensions\ms-python.python-2022.6.0\pythonFiles\lib\python\debugpy\launcher' '60328' '--' 'c:\Users\Devin\Desktop\ImageComp\CS510\HW5\mutiTaskCnn.py'
+
+Train
+Bighorn_Sheep:2932
+Bobcat:715        
+Coyote:4879       
+Gray_Fox:1238     
+Javelina:197      
+Mule_Deer:5119    
+Raptor:3600       
+White_tailed_Deer:1205
+Day:9164
+Night:10721
+Total:19885
+
+Validation
+Bighorn_Sheep:326
+Bobcat:81
+Coyote:542
+Gray_Fox:137
+Javelina:21
+Mule_Deer:569
+Raptor:399
+White_tailed_Deer:134
+Day:1014
+Night:1195
+Total:2209
+NVIDIA GeForce RTX 3070 Ti
+_CudaDeviceProperties(name='NVIDIA GeForce RTX 3070 Ti', major=8, minor=6, total_memory=8191MB, multi_processor_count=48)
+epoch     train_loss  valid_loss  acc_class_type  acc_time  time
+0         1.703223    1.636371    0.613852        0.951109  01:52
+Better model found at epoch 0 with valid_loss value: 1.63637113571167.
+1         1.675046    1.714099    0.603440        0.924853  01:39
+2         1.671527    1.651031    0.598008        0.951562  01:39
+3         1.649983    1.680033    0.617021        0.936170  01:42
+4         1.637130    1.623094    0.684925        0.964690  01:38
+Better model found at epoch 4 with valid_loss value: 1.623093843460083.
+5         1.605350    1.589120    0.688094        0.961974  01:36
+Better model found at epoch 5 with valid_loss value: 1.589119791984558.
+6         1.578574    1.555809    0.678135        0.972386  01:36
+Better model found at epoch 6 with valid_loss value: 1.5558089017868042.
+7         1.570511    1.542759    0.725215        0.973291  01:36
+Better model found at epoch 7 with valid_loss value: 1.542758822441101.
+8         1.535380    1.536121    0.716161        0.975555  01:36
+Better model found at epoch 8 with valid_loss value: 1.5361210107803345.
+9         1.537737    1.539008    0.712992        0.972838  01:35
+creating charts
+Backend QtAgg is interactive backend. Turning interactive mode on.

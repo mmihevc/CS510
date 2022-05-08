@@ -90,16 +90,16 @@ class Predictor():
         return classType, time
 
 if __name__ == '__main__': 
-    batch_size = 16
+    batch_size = 64
     imageCount = 0
     tfms = get_transforms()
 
-    datasetChip1 = WildAnimals(transform=tfms[0])
-    datasetChipOthers = WildAnimals(transform=tfms[1], datasetLabel="Test")
+    trainDataSet = WildAnimals(transform=tfms[0])
+    validationDataset = WildAnimals(transform=tfms[1], datasetLabel="Validation")
 
-    trainloader = torch.utils.data.DataLoader(datasetChip1, batch_size=batch_size, shuffle=True)
-    testloader = torch.utils.data.DataLoader(datasetChipOthers, batch_size=batch_size, shuffle=True)
-    data = DataBunch(train_dl=trainloader, valid_dl=trainloader, test_dl=testloader)
+    trainloader = torch.utils.data.DataLoader(trainDataSet, batch_size=batch_size, shuffle=True)
+    validationloader = torch.utils.data.DataLoader(validationDataset, batch_size=batch_size, shuffle=True)
+    data = DataBunch(train_dl=trainloader, valid_dl=validationloader)
 
     def acc_class_type(preds, classType, time): return accuracy(preds[0], classType)
     def acc_time(preds, classType, time): return accuracy(preds[1], time)
@@ -123,7 +123,7 @@ if __name__ == '__main__':
     print(torch.cuda.get_device_name())
     print(torch.cuda.get_device_properties(0))
 
-    learn.fit_one_cycle(5,max_lr=1e-2,
+    learn.fit_one_cycle(10,max_lr=1e-2,
                     callbacks=[callbacks.SaveModelCallback(learn, every='improvement', monitor='valid_loss', name='stage-1')])
 
     learn.load("stage-1")
@@ -148,6 +148,7 @@ if __name__ == '__main__':
                     actualAnimal = labels[0]
                     actualTime = labels[1]
 
+                    #print(f"actual animal: {actualAnimal} actual time: {actualTime} pred animal: {predAnimal} pred time: {predTime}\n")
                     if(predAnimal == actualAnimal):
                         correctAnimal += 1
                     else:
@@ -169,6 +170,7 @@ if __name__ == '__main__':
 
     trained_model = learn.model.cpu()
     pred = Predictor(trained_model)
+    print("creating charts")
     correctAnimal, incorrectAnimal, correctTime, incorrectTime, bothCorrect, oneIncorrect = PredictTestSet(pred)
 
     total = correctAnimal + incorrectAnimal
